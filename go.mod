@@ -1,1 +1,1 @@
-module github.com/tiaguinho/gosoap
+module github.com/shaoliangzhong/gosoap
