@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"reflect"
+	"strings"
 )
 
 var tokens []xml.Token
@@ -40,7 +41,11 @@ func (c Client) MarshalXML(e *xml.Encoder, _ xml.StartElement) error {
 		return err
 	}
 
-	recursiveEncode(c.Params)
+	if len(c.Params) > 0 {
+		recursiveEncode(c.Params)
+	} else if c.XMLParams != "" {
+		parseXMLParams(c.XMLParams)
+	}
 
 	//end envelope
 	endBody(c.Method)
@@ -80,6 +85,24 @@ func recursiveEncode(hm interface{}) {
 	case reflect.String:
 		content := xml.CharData(v.String())
 		tokens = append(tokens, content)
+	}
+}
+
+func parseXMLParams(xmlStr string) {
+	decoder := xml.NewDecoder(strings.NewReader(xmlStr))
+	for {
+		token, _ := decoder.Token()
+		if token == nil {
+			break
+		}
+
+		if charData, isCharData := token.(xml.CharData); isCharData {
+			if stringValue := strings.Trim(strings.Replace(string(charData), "\n", "", -1), " "); stringValue != "" {
+				tokens = append(tokens, xml.CharData(stringValue))
+			}
+		} else {
+			tokens = append(tokens, token)
+		}
 	}
 }
 

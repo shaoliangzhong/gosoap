@@ -49,6 +49,7 @@ type Client struct {
 	Method       string
 	SoapAction   string
 	Params       Params
+	XMLParams    string
 	HeaderName   string
 	HeaderParams HeaderParams
 	Definitions  *wsdlDefinitions
@@ -66,7 +67,7 @@ func (c *Client) GetLastRequest() []byte {
 }
 
 // Call call's the method m with Params p
-func (c *Client) Call(m string, p Params) (err error) {
+func (c *Client) Call(m string, p interface{}) (err error) {
 	if c.Definitions == nil {
 		return errors.New("WSDL definitions not found")
 	}
@@ -76,7 +77,13 @@ func (c *Client) Call(m string, p Params) (err error) {
 	}
 
 	c.Method = m
-	c.Params = p
+
+	if pMap, isMap := p.(Params); isMap {
+		c.Params = pMap
+	} else if pStr, isStr := p.(string); isStr {
+		c.XMLParams = pStr
+	}
+
 	c.SoapAction = c.Definitions.GetSoapActionFromWsdlOperation(c.Method)
 	if c.SoapAction == "" {
 		c.SoapAction = fmt.Sprintf("%s/%s", c.URL, c.Method)
