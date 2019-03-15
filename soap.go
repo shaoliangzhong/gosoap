@@ -21,12 +21,16 @@ type Params map[string]interface{}
 
 // SoapClient return new *Client to handle the requests with the WSDL
 func SoapClient(wsdl string) (*Client, error) {
+	return SoapClientWithHeaders(wsdl, nil)
+}
+
+func SoapClientWithHeaders(wsdl string, headers *map[string]string) (*Client, error)  {
 	_, err := url.Parse(wsdl)
 	if err != nil {
 		return nil, err
 	}
 
-	d, err := getWsdlDefinitions(wsdl)
+	d, err := getWsdlDefinitionsWithHeaders(wsdl, headers)
 	if err != nil {
 		return nil, err
 	}
@@ -35,6 +39,7 @@ func SoapClient(wsdl string) (*Client, error) {
 		WSDL:        wsdl,
 		URL:         strings.TrimSuffix(d.TargetNamespace, "/"),
 		Definitions: d,
+		httpHeaders: headers,
 	}
 
 	return c, nil
@@ -44,6 +49,7 @@ func SoapClient(wsdl string) (*Client, error) {
 // request and response of the server
 type Client struct {
 	HttpClient   *http.Client
+	httpHeaders  *map[string]string
 	WSDL         string
 	URL          string
 	Method       string
@@ -147,6 +153,12 @@ func (c *Client) doRequest(url string) ([]byte, error) {
 	}
 
 	req.ContentLength = int64(len(c.payload))
+
+	if c.httpHeaders != nil {
+		for k, v := range *c.httpHeaders {
+			req.Header.Add(k, v)
+		}
+	}
 
 	req.Header.Add("Content-Type", "text/xml;charset=UTF-8")
 	req.Header.Add("Accept", "text/xml")

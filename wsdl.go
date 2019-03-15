@@ -154,13 +154,31 @@ type xsdMaxInclusive struct {
 
 // getWsdlDefinitions sent request to the wsdl url and set definitions on struct
 func getWsdlDefinitions(u string) (wsdl *wsdlDefinitions, err error) {
-	r, err := http.Get(u)
+	return getWsdlDefinitionsWithHeaders(u, nil)
+}
+
+// getWsdlDefinitionsWithOptions adds support for custom headers to getWsdlDefinitions
+func getWsdlDefinitionsWithHeaders(url string, headers *map[string]string) (wsdl *wsdlDefinitions, err error) {
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
-	defer r.Body.Close()
 
-	decoder := xml.NewDecoder(r.Body)
+	if headers != nil {
+		for k, v := range *headers {
+			req.Header.Set(k, v)
+		}
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	decoder := xml.NewDecoder(resp.Body)
 	decoder.CharsetReader = charset.NewReaderLabel
 	err = decoder.Decode(&wsdl)
 
